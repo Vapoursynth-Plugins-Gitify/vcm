@@ -1,0 +1,181 @@
+// this code repeats. so will insert at appropriate place
+
+	// if ( nb = 8)
+	// {
+	//	uint8_t * sp = (uint8_t *) srcp;
+	//	uint8_t * dp = (uint8_t *) dstp;
+						// 8 bit samples
+	
+	for( int r = d->row; r <  d->row + d->nrows; r ++)
+	{
+	 
+		 if (d->morph)
+
+			getVMorphInput(in, sp + r * pitch, d->nfft, wd, d->logLUT);
+
+		else
+
+			getVInput(in, sp + r * pitch, d->nfft, wd);
+
+			d->fftwf_execute_dft_r2c(d->pf, in, out);
+
+						// the following for power spectrum
+		
+						// sum powerspectra
+		for(int i = 0; i < d->best / 2 + 1; i++)
+		{				
+
+			powerspect[i] += out[i][0] * out[i][0] + out[i][1] * out[i][1];
+		}
+	}
+					
+					// normalize
+	float pmax = 0;
+
+	for(int i = 0; i < d->best/2 + 1; i ++)
+	{
+		if ( pmax < powerspect[i])
+
+			pmax = powerspect[i];
+	}
+	// process the frame
+	for(int h = 0; h < ht ; h++)
+	{
+		if ( d->morph)
+			getVMorphInput(in, sp + h * pitch, d->best, wd, d->logLUT);
+		else
+			getVInput(in, sp + h * pitch, d->best, wd );
+
+		d->fftwf_execute_dft_r2c(d->pf, in, out);
+			
+		ApplyFilter(out,d->FreqFilter, d->best /2 + 1);		
+
+		d->fftwf_execute_dft_c2r(d->pin,  out, in);
+
+		if( d->morph)
+
+			getVMorphOutput(in, dp + h * pitch, wd, max);
+		else
+
+			getVOutput(in, dp + h * pitch, wd, max);
+	}
+
+	// zero out left half of frame
+	for ( int h = 0; h < ht; h ++)
+	{
+		for ( int w = 0; w < wd /2; w++)
+		{
+			dp[ h * pitch + w] = 0;
+		}
+	}
+
+	int panelh= 100;
+	int pscale = 100;
+
+	if (ht < 220)
+	{
+		panelh = (ht - 20) / 2;
+		pscale = panelh;
+	}
+
+		// scale and display   
+		if(pmax > 0)
+		{
+
+			for(int i = 0; i < wd / 2; i++)
+			{
+					//power spectrum
+				for (int h = 0; h <  (powerspect[i] * pscale) / pmax; h ++)
+				{
+
+						dp[(2 * panelh + 20 - h) * pitch +  i] = max; // normal scale
+				}
+				
+				
+						// exp gamma scale
+				for(int h = 0; h < pow(powerspect[i]  / pmax, d->gamma) * pscale; h ++)
+				{
+
+					dp[(panelh - h) * pitch + i] = max; // gamma scale
+				}
+					
+					// designed filter
+				dp[(panelh - (int)(pscale * d->FreqFilter[i] * d->nfft)) * pitch + i] = (max + max) / 3;
+
+				dp[(panelh + 1 - (int)(pscale * d->FreqFilter[i] * d->nfft)) * pitch +  i] = (max + max) / 3;
+		
+			}
+		}
+
+		
+
+		for(int i = 0; i < NYQUIST; i ++)
+		{
+			int ws = (i * d->best) / (2*NYQUIST) ;
+					// display horizontal scale for freq
+			if((i % 100) == 0)
+			{
+				for(int h = 0; h < 10; h ++)
+				{
+
+					dp[(h + panelh + 5) * pitch +  ws] = max;
+				}
+			}
+
+			else if((i % 50) == 0)
+			{
+				if(wd >= NYQUIST/20)	// to ensure readability
+				{
+					for(int h = 0; h < 6; h ++)
+					{
+
+						dp[(h + panelh + 6) * pitch + ws] = (4 * max)/ 5;
+					}
+				}
+			}
+			else if((i % 10) == 0)
+			{
+				if(wd >= NYQUIST / 2)
+				{
+					for(int h = 0; h < 3; h ++)
+					{
+
+						dp[(h + panelh + 7) * pitch +  ws] = (3* max)/4;
+					}
+				}
+			}
+				
+
+		}
+
+
+/*
+	 for (int plane = 1; plane < fi->numPlanes; plane ++) 
+	{
+            const uint8_t *srcp = vsapi->getReadPtr(src, plane);
+            int src_stride = vsapi->getStride(src, plane);
+
+            uint8_t *dstp = vsapi->getWritePtr(dst, plane);
+            int dst_stride = vsapi->getStride(dst, plane); 
+            
+            int ht = vsapi->getFrameHeight(src, plane);
+			            
+            int wd = vsapi->getFrameWidth(src, plane);
+
+			int pitch = dst_stride / fi->bytesPerSample;
+					// copy u & v of right half
+
+			vs_bitblt(dstp + wd/ 2, dst_stride, srcp+ wd / 2, src_stride, wd/2 * fi->bytesPerSample, ht);
+	
+	// make left half of image grey
+		 for (int y = 0; y < ht; y++) 
+		{
+			for (int x = 0; x < wd / 2; x++)
+			{
+				 dstp[x] = grey;
+			}	
+
+			dstp += pitch;
+		 }
+	 }
+*/

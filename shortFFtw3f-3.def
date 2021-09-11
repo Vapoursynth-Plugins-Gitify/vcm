@@ -1,0 +1,21 @@
+LIBRARY libfftw3f-3.dll
+EXPORTS
+fftwf_cleanup
+fftwf_cleanup_threads
+fftwf_destroy_plan
+fftwf_execute
+fftwf_execute_dft
+fftwf_execute_dft_c2r
+fftwf_execute_dft_r2c
+fftwf_free
+fftwf_init_threads
+fftwf_malloc
+fftwf_plan_dft_1d
+fftwf_plan_dft_2d
+fftwf_plan_dft_c2r
+fftwf_plan_dft_c2r_1d
+fftwf_plan_dft_c2r_2d
+fftwf_plan_dft_r2c
+fftwf_plan_dft_r2c_1d
+fftwf_plan_dft_r2c_2d
+fftwf_plan_with_nthreads
